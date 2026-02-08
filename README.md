@@ -11,8 +11,10 @@ This document records the complete workflow and commands used to generate 5G-lik
 The SDN control plane is started using the RYU controller. A Python virtual environment is activated before launching the controller.
 
 **Commands:**
+```bash
 source ~/ryuenv/bin/activate
 ryu-manager ryu.app.simple_switch_13
+```
 
 *This initializes the SDN control plane and enables OpenFlow communication between the controller and Open vSwitch.*
 
