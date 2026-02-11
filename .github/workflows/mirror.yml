@@ -12,12 +12,16 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
-      - name: Mirror to College Repository
+      - name: Push to College Repository
+        env:
+          COLLEGE_TOKEN: ${{ secrets.COLLEGE_TOKEN }}
         run: |
           git config --global user.name "mirror-bot"
           git config --global user.email "mirror@github.com"
 
-          git remote add college https://sujithras270406-prog:${{ secrets.COLLEGE_TOKEN }}@github.com/sujithras270406-prog/SDN-Based-Traffic-Classification-AIML.git
+          git remote add college https://github.com/sujithras270406-prog/SDN-Based-Traffic-Classification-AIML.git
 
-          git push --force college main
+          git push https://x-access-token:${COLLEGE_TOKEN}@github.com/sujithras270406-prog/SDN-Based-Traffic-Classification-AIML.git main --force
