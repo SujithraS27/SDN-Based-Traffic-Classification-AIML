@@ -1,0 +1,20 @@
+name: Mirror to College Repo
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Push to College Repository
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+          git remote add college https://x-access-token:${{ secrets.COLLEGE_TOKEN }}@github.com/sujithras270406-prog/SDN-Based-Traffic-Classification-AIML.git
+          git push college main --force
