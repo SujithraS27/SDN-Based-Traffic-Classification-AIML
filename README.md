@@ -322,3 +322,254 @@ cp flow_stats.csv flow_stats_raw_536k.csv
 * ✔ Large-scale dataset generated
 * ✔ Concurrent 5G-like traffic emulated
 * ✔ Ready for ML classification
+
+# 📊 Phase 3 – Data Preprocessing & Feature Engineering
+
+## 📌 Overview
+
+After completing:
+
+- 5G traffic emulation (eMBB, URLLC, mMTC)
+- Real-time SDN flow statistics collection
+- Dataset generation (~536K rows)
+
+We entered the **Feature Engineering Phase**.
+
+The objective of this phase is to:
+
+- Clean the dataset
+- Remove invalid flows
+- Derive traffic-intelligent features
+- Prepare dataset for machine learning (LightGBM)
+
+---
+
+# 🧹 Step 1 – Load Dataset in Google Colab
+
+## 🔹 Mount Google Drive
+
+```python
+from google.colab import drive
+drive.mount('/content/drive')
+```
+
+**Why?**
+
+- Allows access to large dataset stored in Google Drive
+- Prevents dataset loss after runtime restart
+
+## 🔹 Load CSV File
+
+```python
+import pandas as pd
+
+file_path = "/content/drive/MyDrive/flow_stats_raw_536k.csv"
+df = pd.read_csv(file_path, low_memory=False)
+```
+
+**Why?**
+
+- `low_memory=False` prevents type misinterpretation in large datasets
+- Loads real-time SDN flow statistics into dataframe
+
+---
+
+# 🧹 Step 2 – Data Cleaning
+
+## 🔹 Remove Zero-Duration Flows
+
+```python
+df = df[df['duration_sec'] > 0]
+```
+
+**Why?**
+
+- Prevents division by zero
+- Invalid flows corrupt rate-based features
+
+## 🔹 Remove Zero Packet Flows
+
+```python
+df = df[df['packet_count'] > 0]
+```
+
+**Why?**
+
+- Avoids division errors in average packet size calculation
+
+## 🔹 Remove Duplicate Rows
+
+```python
+df.drop_duplicates(inplace=True)
+```
+
+**Why?**
+
+- Prevents model overfitting
+- Removes repeated statistics
+
+---
+
+# ⚙️ Step 3 – Derived Feature Creation
+
+Raw OpenFlow statistics are not sufficient for ML.  
+We created behavioral traffic features.
+
+## 🔹 1. Byte Rate (Bytes per Second)
+
+```python
+df['byte_rate'] = df['byte_count'] / df['duration_sec']
+```
+
+**Purpose:**
+
+- Measures bandwidth consumption
+- Differentiates eMBB (high) from mMTC (low)
+
+## 🔹 2. Packet Rate (Packets per Second)
+
+```python
+df['packet_rate'] = df['packet_count'] / df['duration_sec']
+```
+
+**Purpose:**
+
+- Captures traffic intensity
+- Useful for identifying frequent IoT traffic
+
+## 🔹 3. Average Packet Size
+
+```python
+df['avg_packet_size'] = df['byte_count'] / df['packet_count']
+```
+
+**Purpose:**
+
+- Distinguishes small IoT packets vs large TCP transfers
+
+## 🔹 4. Throughput (Bits per Second)
+
+```python
+df['throughput'] = (df['byte_count'] * 8) / df['duration_sec']
+```
+
+**Why multiply by 8?**
+
+- Converts bytes → bits
+- Throughput is measured in bits/sec
+
+## 🔹 5. Flow Intensity
+
+```python
+df['flow_intensity'] = df['packet_count'] / df['duration_sec']
+```
+
+**Purpose:**
+
+- Captures burst behavior
+- Useful in RL state definition later
+
+## 🔹 6. Burst Ratio
+
+```python
+df['burst_ratio'] = df['byte_rate'] / (df['packet_rate'] + 1e-6)
+```
+
+**Purpose:**
+
+- Differentiates large-payload vs small-payload transmissions
+
+---
+
+# 📉 Step 4 – Log Transform Features
+
+Network traffic data is highly skewed.
+
+We applied log transformation:
+
+```python
+import numpy as np
+
+df['log_byte_count'] = np.log1p(df['byte_count'])
+df['log_packet_count'] = np.log1p(df['packet_count'])
+df['log_throughput'] = np.log1p(df['throughput'])
+```
+
+**Why `log1p()`?**
+
+- Handles zero values safely
+- Improves ML decision boundary
+
+---
+
+# 🧯 Step 5 – Handle Infinite Values
+
+```python
+df.replace([np.inf, -np.inf], np.nan, inplace=True)
+df.dropna(inplace=True)
+```
+
+**Why?**
+
+- Removes corrupted rows
+- Ensures clean numerical input for LightGBM
+
+---
+
+# 🗑 Step 6 – Remove Irrelevant Columns
+
+```python
+df.drop(['timestamp','dpid'], axis=1, inplace=True)
+```
+
+**Why?**
+
+- `timestamp` can cause data leakage
+- `dpid` (switch ID) may introduce bias
+- These are not behavioral traffic features
+
+---
+
+# 📌 Final Feature Set
+
+The engineered dataset includes:
+
+- packet_count  
+- byte_count  
+- duration_sec  
+- byte_rate  
+- packet_rate  
+- avg_packet_size  
+- throughput  
+- flow_intensity  
+- burst_ratio  
+- log_byte_count  
+- log_packet_count  
+- log_throughput  
+
+This structured dataset is now ready for:
+
+- Phase 4 – Traffic Labeling  
+- Phase 5 – LightGBM Classification  
+- Phase 6 – Reinforcement Learning  
+
+---
+
+# 🏁 Phase Status
+
+| Phase | Status |
+|-------|--------|
+| Traffic Emulation | ✅ Completed |
+| Flow Stats Collection | ✅ Completed |
+| Dataset Creation | ✅ Completed |
+| Feature Engineering | ✅ Completed |
+| Traffic Labeling | ⏳ Next Step |
+
+---
+
+# 📊 Outcome of This Phase
+
+✔ Clean ML-ready dataset  
+✔ Behavioral traffic representation  
+✔ Ready for supervised learning  
+✔ Supports future RL integration  
