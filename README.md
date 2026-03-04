@@ -322,9 +322,6 @@ cp flow_stats.csv flow_stats_raw_536k.csv
 * ✔ Large-scale dataset generated
 * ✔ Concurrent 5G-like traffic emulated
 * ✔ Ready for ML classification
-Here is your **entire content converted into a single Markdown code block** so you can directly copy-paste into `README.md`:
-
-````markdown
 # SDN Traffic Classification using LightGBM
 
 This project performs **traffic classification in an SDN network** using **machine learning**. Flow statistics are collected from an SDN environment built with **Mininet and the RYU controller**, and a **LightGBM model** is trained to classify traffic into:
@@ -639,11 +636,18 @@ accuracy = accuracy_score(y_test, y_pred)
 print("Accuracy:", accuracy)
 ```
 
-## Result
+---
 
-```
-Accuracy ≈ 99.9%
-```
+# Model Performance
+
+| Metric    | Score   |
+|-----------|----------|
+| Accuracy  | 99.93%  |
+| Precision | 99.93%  |
+| Recall    | 99.93%  |
+| F1 Score  | 99.93%  |
+
+The LightGBM model achieves very high classification performance, demonstrating that flow-level statistical features can effectively distinguish between **eMBB**, **URLLC**, and **mMTC** traffic types.
 
 ---
 
@@ -700,5 +704,4 @@ This visualization highlights the features most influential for classification.
 </p>
 
 The confusion matrix shows how accurately the model distinguishes between traffic types.
-````
 
