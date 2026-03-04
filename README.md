@@ -322,6 +322,7 @@ cp flow_stats.csv flow_stats_raw_536k.csv
 * ✔ Large-scale dataset generated
 * ✔ Concurrent 5G-like traffic emulated
 * ✔ Ready for ML classification
+
 # SDN Traffic Classification using LightGBM
 
 This project performs **traffic classification in an SDN network** using **machine learning**. Flow statistics are collected from an SDN environment built with **Mininet and the RYU controller**, and a **LightGBM model** is trained to classify traffic into:
