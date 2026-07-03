@@ -706,3 +706,378 @@ This visualization highlights the features most influential for classification.
 
 The confusion matrix shows how accurately the model distinguishes between traffic types.
 
+---
+
+# Reinforcement Learning Based QoS Optimization
+
+After traffic classification using LightGBM, a Reinforcement Learning agent is used to dynamically optimize Quality of Service (QoS) parameters in the SDN network.
+
+The classified traffic type and network flow statistics are provided as the state to a Proximal Policy Optimization (PPO) agent.
+
+The RL agent learns to dynamically select QoS policies for different traffic conditions.
+
+---
+
+# 11. Prepare Traffic Data for Reinforcement Learning
+
+The engineered traffic dataset and trained LightGBM classifier are loaded.
+
+## Command
+
+    import pandas as pd
+    import joblib
+
+    df = pd.read_csv("traffic_dataset_features_final.csv")
+    lgb_model = joblib.load("traffic_classifier_lightgbm.pkl")
+
+    df = df.drop_duplicates()
+    df = df.replace([np.inf, -np.inf], np.nan)
+    df = df.dropna()
+
+    data = df.sample(8000).reset_index(drop=True)
+
+## Why
+
+The RL environment uses real traffic flow statistics collected from the SDN network.
+
+Invalid and duplicate samples are removed before training.
+
+A subset of traffic flows is used to create the reinforcement learning environment.
+
+---
+
+# 12. Normalize Network Features
+
+Network features have different numerical ranges. Min-Max normalization is applied before providing the state to the RL agent.
+
+## Command
+
+    from sklearn.preprocessing import MinMaxScaler
+
+    scaler = MinMaxScaler()
+    data[features] = scaler.fit_transform(data[features])
+
+## Why
+
+Normalization ensures that features such as packet count, throughput, and burst ratio contribute consistently to the RL state.
+
+---
+
+# 13. Define the RL State Space
+
+The RL state consists of network flow statistics and the traffic class predicted by the LightGBM model.
+
+State features include:
+
+    dpid
+    packet_count
+    byte_count
+    duration_sec
+    byte_rate
+    packet_rate
+    avg_packet_size
+    throughput
+    flow_intensity
+    burst_ratio
+    log_byte_count
+    log_throughput
+    predicted traffic class
+
+The LightGBM classifier predicts whether the current flow belongs to:
+
+    eMBB
+    URLLC
+    mMTC
+
+The predicted traffic class is appended to the network state.
+
+---
+
+# 14. Define the QoS Action Space
+
+The RL agent selects one of four QoS policies.
+
+Each action represents:
+
+    [Priority, Bandwidth Allocation, Queue Parameter]
+
+## Actions
+
+    Action 0 → [0.8, 0.2, 0.2]
+    Action 1 → [0.5, 0.8, 0.4]
+    Action 2 → [0.3, 0.3, 0.9]
+    Action 3 → [0.6, 0.6, 0.6]
+
+These actions allow the agent to dynamically modify traffic handling behaviour.
+
+The selected action affects:
+
+- Packet processing priority
+- Bandwidth allocation
+- Queue behaviour
+
+---
+
+# 15. Create the SDN Reinforcement Learning Environment
+
+A custom Gymnasium environment is created to simulate dynamic QoS optimization.
+
+## Environment
+
+    class SDNEnv(gym.Env):
+
+        def __init__(self, data):
+            super().__init__()
+
+            self.data = data
+            self.index = 0
+            self.last_action = None
+
+            self.observation_space = spaces.Box(
+                low=0,
+                high=1,
+                shape=(len(features) + 1,),
+                dtype=np.float32
+            )
+
+            self.action_space = spaces.Discrete(len(actions))
+
+The environment performs three major operations:
+
+1. Observe the current network state
+2. Select a QoS action
+3. Calculate a reward based on network performance
+
+---
+
+# 16. Reward Function
+
+The RL agent receives a reward based on multiple network performance metrics.
+
+Reward components include:
+
+    Throughput Gain
+    Delay Reduction
+    Packet Loss Reduction
+    Traffic Stability
+    Network Efficiency
+
+The reward encourages the agent to:
+
+- Increase throughput
+- Reduce latency
+- Reduce burst behaviour
+- Improve network stability
+- Improve resource efficiency
+
+Repeated selection of the same action is slightly penalized to encourage policy exploration.
+
+The final reward is normalized and bounded before being returned to the PPO agent.
+
+---
+
+# 17. Train the PPO Agent
+
+Proximal Policy Optimization (PPO) is used to learn the QoS control policy.
+
+## Command
+
+    from stable_baselines3 import PPO
+
+    env = SDNEnv(data)
+
+    model = PPO(
+        "MlpPolicy",
+        env,
+        learning_rate=3e-4,
+        n_steps=2048,
+        batch_size=128,
+        gamma=0.99,
+        ent_coef=0.03,
+        vf_coef=1.0,
+        verbose=1
+    )
+
+    model.learn(total_timesteps=120000)
+
+    model.save("rl_qos_agent")
+
+## Why PPO
+
+PPO provides stable policy updates and is suitable for dynamic network control environments.
+
+The agent continuously interacts with the SDN environment and learns QoS policies that maximize cumulative reward.
+
+---
+
+# PPO Training Performance
+
+| Parameter | Value |
+|---|---:|
+| Total Timesteps | 120,832 |
+| Average Episode Length | 8000 |
+| Average Episode Reward | 992 |
+| FPS | 168 |
+| Learning Rate | 0.0003 |
+| KL Divergence | 0.0146 |
+| Clip Fraction | 0.061 |
+| Entropy Loss | -1.05 |
+| Policy Gradient Loss | -0.00317 |
+| Value Loss | 2.08 |
+
+The PPO training statistics indicate stable learning behaviour and controlled policy updates.
+
+---
+
+# 18. Evaluate the RL Agent
+
+The trained PPO agent is evaluated over multiple network states.
+
+## Command
+
+    actions_taken = []
+    rewards = []
+
+    obs, _ = env.reset()
+
+    for _ in range(2000):
+
+        action, _ = model.predict(obs)
+        action = int(action)
+
+        obs, reward, done, _, _ = env.step(action)
+
+        actions_taken.append(action)
+        rewards.append(reward)
+
+The selected actions and rewards are recorded for performance analysis.
+
+---
+
+# RL Reward Analysis
+
+![RL Reward](images/rl_reward.png)
+
+The reward increases during training, indicating that the PPO agent gradually learns improved QoS policies.
+
+---
+
+# Throughput and Latency Analysis
+
+The trained RL agent produces different network behaviour for each traffic category.
+
+| Traffic Type | Throughput | Latency |
+|---|---:|---:|
+| URLLC | 3.76 × 10³ | 0.163 |
+| eMBB | 1.99 × 10¹⁰ | 0.044 |
+| mMTC | 5.83 × 10¹ | 2657.43 |
+
+## Observations
+
+- **eMBB** achieves the highest throughput, supporting high-bandwidth applications.
+- **URLLC** maintains low latency suitable for real-time communication.
+- **mMTC** has lower throughput and higher latency due to IoT-style traffic characteristics.
+
+---
+
+# Throughput Variation Over Time
+
+![Throughput Variation](images/throughput_variation.png)
+
+The throughput remains stable with minor fluctuations.
+
+This indicates that the RL agent adapts to changing network conditions while maintaining network performance.
+
+---
+
+# Action Distribution Across Traffic Types
+
+![Action Distribution](images/action_distribution.png)
+
+Different traffic classes receive different QoS actions.
+
+The PPO agent learns traffic-specific resource allocation behaviour instead of applying a single static policy.
+
+---
+
+# Distribution of RL Actions
+
+![RL Action Distribution](images/rl_action_histogram.png)
+
+The distribution of selected actions demonstrates exploration of multiple QoS policies.
+
+---
+
+# RL Actions Over Time
+
+![RL Actions Over Time](images/rl_actions_over_time.png)
+
+The RL agent dynamically changes its selected action across network states.
+
+This demonstrates adaptive QoS decision-making based on changing traffic conditions.
+
+---
+
+# Real-Time QoS Decision Making
+
+The final system integrates the LightGBM traffic classifier with the PPO-based QoS optimization agent.
+
+The complete workflow is:
+
+    SDN Traffic
+          ↓
+    RYU Flow Statistics
+          ↓
+    Feature Engineering
+          ↓
+    LightGBM Classification
+          ↓
+    Traffic Type
+    (eMBB / URLLC / mMTC)
+          ↓
+    PPO Reinforcement Learning Agent
+          ↓
+    Dynamic QoS Action
+          ↓
+    Priority + Bandwidth + Queue Allocation
+
+For each network flow, the system:
+
+1. Collects real-time flow statistics.
+2. Classifies the traffic using LightGBM.
+3. Constructs the RL network state.
+4. Selects a QoS action using PPO.
+5. Dynamically determines queue and priority behaviour.
+
+This enables adaptive traffic management instead of static QoS configuration.
+
+---
+
+# Final Results
+
+The proposed ML-RL based SDN system successfully performs:
+
+- Real-time SDN flow monitoring
+- 5G-like traffic generation
+- Traffic classification using LightGBM
+- eMBB, URLLC, and mMTC traffic identification
+- PPO-based QoS policy learning
+- Dynamic priority and queue selection
+- Adaptive bandwidth allocation
+- Traffic-specific QoS optimization
+
+The LightGBM classifier achieved **99.93% accuracy**.
+
+The PPO agent learned dynamic QoS policies that maintain high throughput for eMBB traffic and low latency for latency-sensitive traffic.
+
+---
+
+# Conclusion
+
+This project demonstrates an intelligent SDN traffic management system combining Machine Learning and Reinforcement Learning.
+
+LightGBM is used to classify network flows into eMBB, URLLC, and mMTC traffic categories.
+
+The classified traffic and network state are then provided to a PPO reinforcement learning agent that dynamically selects QoS policies.
+
+The integration of SDN, machine learning, and reinforcement learning enables adaptive traffic management suitable for intelligent 5G and future 6G network environments.
