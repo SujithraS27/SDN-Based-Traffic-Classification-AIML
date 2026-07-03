@@ -1019,7 +1019,7 @@ This demonstrates adaptive QoS decision-making based on changing traffic conditi
 ---
 ### Real-Time QoS Decision Output
 
-![Real-Time QoS Decision](images/sdn_terminal.png)
+![Real-Time QoS Decision](images/sdn_terminal.jpeg)
 
 The terminal output demonstrates the real-time integration of traffic classification and RL-based QoS optimization.
 
