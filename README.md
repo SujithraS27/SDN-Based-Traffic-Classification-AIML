@@ -956,7 +956,7 @@ The selected actions and rewards are recorded for performance analysis.
 
 # RL Reward Analysis
 
-![RL Reward](images/rl_reward.png)
+![RL Reward](images/reward.png)
 
 The reward increases during training, indicating that the PPO agent gradually learns improved QoS policies.
 
@@ -982,7 +982,7 @@ The trained RL agent produces different network behaviour for each traffic categ
 
 # Throughput Variation Over Time
 
-![Throughput Variation](images/throughput_variation.png)
+![Throughput Variation](images/throughput_time.png)
 
 The throughput remains stable with minor fluctuations.
 
@@ -1002,7 +1002,7 @@ The PPO agent learns traffic-specific resource allocation behaviour instead of a
 
 # Distribution of RL Actions
 
-![RL Action Distribution](images/rl_action_histogram.png)
+![RL Action Distribution](images/action_hist.png)
 
 The distribution of selected actions demonstrates exploration of multiple QoS policies.
 
@@ -1010,13 +1010,22 @@ The distribution of selected actions demonstrates exploration of multiple QoS po
 
 # RL Actions Over Time
 
-![RL Actions Over Time](images/rl_actions_over_time.png)
+![RL Actions Over Time](images/actions_time.png)
 
 The RL agent dynamically changes its selected action across network states.
 
 This demonstrates adaptive QoS decision-making based on changing traffic conditions.
 
 ---
+### Real-Time QoS Decision Output
+
+![Real-Time QoS Decision](images/sdn_terminal.png)
+
+The terminal output demonstrates the real-time integration of traffic classification and RL-based QoS optimization.
+
+Each network flow is classified as **eMBB, URLLC, or mMTC**. Based on the current network state, the PPO agent selects a QoS action and dynamically assigns the corresponding **queue and priority level**.
+
+The variation in selected actions across traffic flows shows that the RL agent adapts its QoS decisions instead of applying a fixed traffic management policy.
 
 # Real-Time QoS Decision Making
 
